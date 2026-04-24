@@ -122,7 +122,7 @@ export default function App() {
 
     try {
       // Step 1: Send to Google Sheets (Fire and Forget)
-      fetch('https://script.google.com/macros/s/AKfycbxzc3Ly45RCGgE5D-R66tZ0XOCVtO1O10i8NRvv9_Fclw-iBiK5XJQrf3MQ9qgJ5cmwng/exec', {
+      fetch('https://script.google.com/macros/s/AKfycbz3uW1iH_kWWBqZSr4zJLZCTAHUaHbgx1XS4PvCOonr4utuTj6aUAMleX6jDTYWL9Y6Rg/exec', {
         method: 'POST',
         mode: 'no-cors',
         headers: { 'Content-Type': 'application/json' },
