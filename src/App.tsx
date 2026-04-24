@@ -81,18 +81,6 @@ export default function App() {
       minute: '2-digit'
     });
 
-    const productsList = Object.entries(cart).map(([id, qty]) => {
-      const product = PRODUCTS.find(p => p.id === Number(id));
-      return product ? `${product.name} (${qty}x)` : '';
-    }).filter(Boolean).join(', ');
-
-    const payload = {
-      ...shippingData,
-      products: productsList,
-      totalPrice: getTotal(),
-      timestamp: formattedDate
-    };
-
     setIsSubmitting(true);
 
     // Prepare message for WhatsApp
@@ -114,10 +102,27 @@ export default function App() {
 
     message += `\n*TOTAL HARGA: Rp ${getTotal().toLocaleString()}*\n`;
     message += `\n_Waktu Pemesanan: ${formattedDate}_`;
+    // Data for Google Sheets
+    const productsList = Object.entries(cart).map(([id, qty]) => {
+      const product = PRODUCTS.find(p => p.id === Number(id));
+      return product ? `${product.name} (${qty}x)` : '';
+    }).filter(Boolean).join(', ');
+
+    const payload = {
+      'Nama Depan': shippingData.firstName,
+      'Nama Belakang': shippingData.lastName,
+      'Email': shippingData.email,
+      'Alamat': shippingData.address,
+      'Kota': shippingData.city,
+      'Kode Pos': shippingData.postalCode,
+      'Nama Produk': productsList,
+      'Total Harga': `Rp ${getTotal().toLocaleString()}`,
+      'Waktu & Tanggal': formattedDate
+    };
 
     try {
-      // Step 1: Send to Google Sheets (Fire and Forget for high speed)
-      fetch('https://script.google.com/macros/s/AKfycbzeZbDcwI7QiI5_00oZQpP1Dlrb_AgV-DFD8IFmseYcImhU0DKom8M6l2vB2_4qz6JljQ/exec', {
+      // Step 1: Send to Google Sheets (Fire and Forget)
+      fetch('https://script.google.com/macros/s/AKfycbxzc3Ly45RCGgE5D-R66tZ0XOCVtO1O10i8NRvv9_Fclw-iBiK5XJQrf3MQ9qgJ5cmwng/exec', {
         method: 'POST',
         mode: 'no-cors',
         headers: { 'Content-Type': 'application/json' },
@@ -127,9 +132,6 @@ export default function App() {
       // Step 2: Immediate WhatsApp redirect
       const url = `https://wa.me/628561189540?text=${encodeURIComponent(message)}`;
       window.open(url, '_blank');
-      
-      // Optional: Give a small delay to simulate processing if needed, 
-      // but redirecting immediately is what the user asked for.
     } catch (error) {
       console.error('Error in checkout:', error);
     } finally {

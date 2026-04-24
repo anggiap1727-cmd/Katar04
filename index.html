@@ -1,50 +1,12 @@
-<script>
-    // MASUKKAN URL DEPLOY BARU ANDA DI SINI
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz3uW1iH_kWWBqZSr4zJLZCTAHUaHbgx1XS4PvCOonr4utuTj6aUAMleX6jDTYWL9Y6Rg/exec'; 
-
-    const form = document.getElementById('orderForm');
-    
-    form.addEventListener('submit', e => {
-        e.preventDefault();
-        const btn = document.getElementById('submitBtn');
-        btn.disabled = true;
-        btn.innerText = 'Mengirim Data...';
-
-        // Mengonversi FormData ke URLSearchParams agar lebih kompatibel dengan Google Script
-        const formData = new FormData(form);
-        const params = new URLSearchParams();
-        
-        formData.forEach((value, key) => {
-            params.append(key, value);
-        });
-
-        // Pengiriman menggunakan mode 'no-cors' jika terjadi masalah redirect
-        fetch(SCRIPT_URL, { 
-            method: 'POST', 
-            body: params,
-            mode: 'no-cors' // Penting untuk menghindari blokir CORS dari GitHub ke Google
-        })
-        .then(() => {
-            alert('Sukses! Data pesanan Lok4L4ku telah tersimpan.');
-            // Opsional: Lanjut kirim pesan ke WhatsApp
-            kirimWhatsApp();
-            form.reset();
-            btn.disabled = false;
-            btn.innerText = 'Konfirmasi & Kirim Pesanan';
-        })
-        .catch(error => {
-            alert('Gagal mengirim data. Cek koneksi atau URL Script.');
-            console.error('Error!', error.message);
-            btn.disabled = false;
-        });
-    });
-
-    function kirimWhatsApp() {
-        const nama = document.getElementsByName('namaDepan')[0].value;
-        const produk = document.getElementById('namaProduk').value;
-        const harga = document.getElementById('totalHarga').value;
-        const nomorWA = "628123456789"; // Ganti dengan nomor admin Tegal Parang
-        const teks = `Halo Lok4L4ku, ada pesanan baru!%0ANama: ${nama}%0AProduk: ${produk}%0ATotal: ${harga}`;
-        window.open(`https://wa.me/${nomorWA}?text=${teks}`, '_blank');
-    }
-</script>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Katar04 RW.04 E-Commerce</title>
+  </head>
+  <body className="bg-[#f8fafc]">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
