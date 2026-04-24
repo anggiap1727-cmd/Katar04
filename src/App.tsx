@@ -95,49 +95,43 @@ export default function App() {
 
     setIsSubmitting(true);
 
+    // Prepare message for WhatsApp
+    let message = "*PESANAN BARU - KATAR04*\n\n";
+    message += `*Data Pemesan:*\n`;
+    message += `Nama: ${shippingData.firstName} ${shippingData.lastName}\n`;
+    message += `Email: ${shippingData.email}\n`;
+    message += `Alamat: ${shippingData.address}\n`;
+    message += `Kota: ${shippingData.city}\n`;
+    message += `Kode Pos: ${shippingData.postalCode}\n\n`;
+    
+    message += `*Daftar Produk:*\n`;
+    Object.entries(cart).forEach(([id, qty]) => {
+      const product = PRODUCTS.find(p => p.id === Number(id));
+      if (product) {
+        message += `- ${product.name} (${qty}x) @Rp ${product.price.toLocaleString()}\n`;
+      }
+    });
+
+    message += `\n*TOTAL HARGA: Rp ${getTotal().toLocaleString()}*\n`;
+    message += `\n_Waktu Pemesanan: ${formattedDate}_`;
+
     try {
-      // Step 1: Send to Google Sheets (JSON)
-      // Note: Google Apps Script usually requires a 'POST' or 'GET' request.
-      // Since we can't easily handle CORS 'POST' with redirect without a proxy,
-      // and the user provided a typical Apps Script URL, we attempt a fetch.
-      await fetch('https://script.google.com/macros/s/AKfycbzeZbDcwI7QiI5_00oZQpP1Dlrb_AgV-DFD8IFmseYcImhU0DKom8M6l2vB2_4qz6JljQ/exec', {
+      // Step 1: Send to Google Sheets (Fire and Forget for high speed)
+      fetch('https://script.google.com/macros/s/AKfycbzeZbDcwI7QiI5_00oZQpP1Dlrb_AgV-DFD8IFmseYcImhU0DKom8M6l2vB2_4qz6JljQ/exec', {
         method: 'POST',
-        mode: 'no-cors', // Use no-cors to bypass CORS preflight failures on standard Apps Script URLs
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
-      });
+      }).catch(err => console.error('Silent logging error:', err));
 
-      // Step 2: Proceed to WhatsApp
-      let message = "*PESANAN BARU - KATAR04*\n\n";
-      message += `*Data Pemesan:*\n`;
-      message += `Nama: ${shippingData.firstName} ${shippingData.lastName}\n`;
-      message += `Email: ${shippingData.email}\n`;
-      message += `Alamat: ${shippingData.address}\n`;
-      message += `Kota: ${shippingData.city}\n`;
-      message += `Kode Pos: ${shippingData.postalCode}\n\n`;
-      
-      message += `*Daftar Produk:*\n`;
-      Object.entries(cart).forEach(([id, qty]) => {
-        const product = PRODUCTS.find(p => p.id === Number(id));
-        if (product) {
-          message += `- ${product.name} (${qty}x) @Rp ${product.price.toLocaleString()}\n`;
-        }
-      });
-
-      message += `\n*TOTAL HARGA: Rp ${getTotal().toLocaleString()}*\n`;
-      message += `\n_Waktu Pemesanan: ${formattedDate}_`;
-      
-      const url = `https://wa.me/628561189540text=${encodeURIComponent(message)}`;
+      // Step 2: Immediate WhatsApp redirect
+      const url = `https://wa.me/628561189540?text=${encodeURIComponent(message)}`;
       window.open(url, '_blank');
       
-      // Optional: Clear cart after success
-      // setCart({});
-      // setIsCartOpen(false);
+      // Optional: Give a small delay to simulate processing if needed, 
+      // but redirecting immediately is what the user asked for.
     } catch (error) {
-      console.error('Error submitting order:', error);
-      alert('Terjadi kesalahan saat mengirim pesanan. Silakan coba lagi.');
+      console.error('Error in checkout:', error);
     } finally {
       setIsSubmitting(false);
     }
