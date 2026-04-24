@@ -31,8 +31,21 @@ const PRODUCTS: Product[] = [
 export default function App() {
   const [cart, setCart] = useState<Record<number, number>>({});
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [shippingData, setShippingData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    address: '',
+    city: '',
+    postalCode: ''
+  });
 
   const cartCount = Object.values(cart).reduce((a, b) => a + b, 0);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setShippingData(prev => ({ ...prev, [name]: value }));
+  };
 
   const addToCart = (id: number) => {
     setCart(prev => ({ ...prev, [id]: (prev[id] || 0) + 1 }));
@@ -56,17 +69,82 @@ export default function App() {
     }, 0);
   };
 
-  const checkoutWhatsApp = () => {
-    let message = "Halo Katar04, Saya mau pesan:\n";
-    Object.entries(cart).forEach(([id, qty]) => {
-      const product = PRODUCTS.find(p => p.id === Number(id));
-      if (product) {
-        message += `- ${product.name} (${qty}x)\n`;
-      }
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const checkoutWhatsApp = async () => {
+    const now = new Date();
+    const formattedDate = now.toLocaleDateString('id-ID', { 
+      day: 'numeric', 
+      month: 'long', 
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
     });
-    message += `\nTotal: Rp ${getTotal().toLocaleString()}\nLokasi: RW.04 Tegal Parang`;
-    const url = `https://wa.me/628123456789?text=${encodeURIComponent(message)}`;
-    window.open(url, '_blank');
+
+    const productsList = Object.entries(cart).map(([id, qty]) => {
+      const product = PRODUCTS.find(p => p.id === Number(id));
+      return product ? `${product.name} (${qty}x)` : '';
+    }).filter(Boolean).join(', ');
+
+    const payload = {
+      ...shippingData,
+      products: productsList,
+      totalPrice: getTotal(),
+      timestamp: formattedDate
+    };
+
+    setIsSubmitting(true);
+
+    try {
+      // Step 1: Send to Google Sheets (JSON)
+      // Note: Google Apps Script usually requires a 'POST' or 'GET' request.
+      // Since we can't easily handle CORS 'POST' with redirect without a proxy,
+      // and the user provided a typical Apps Script URL, we attempt a fetch.
+      await fetch('https://script.google.com/macros/s/AKfycbzeZbDcwI7QiI5_00oZQpP1Dlrb_AgV-DFD8IFmseYcImhU0DKom8M6l2vB2_4qz6JljQ/exec', {
+        method: 'POST',
+        mode: 'no-cors', // Use no-cors to bypass CORS preflight failures on standard Apps Script URLs
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      // Step 2: Proceed to WhatsApp
+      let message = "*PESANAN BARU - KATAR04*\n\n";
+      message += `*Data Pemesan:*\n`;
+      message += `Nama: ${shippingData.firstName} ${shippingData.lastName}\n`;
+      message += `Email: ${shippingData.email}\n`;
+      message += `Alamat: ${shippingData.address}\n`;
+      message += `Kota: ${shippingData.city}\n`;
+      message += `Kode Pos: ${shippingData.postalCode}\n\n`;
+      
+      message += `*Daftar Produk:*\n`;
+      Object.entries(cart).forEach(([id, qty]) => {
+        const product = PRODUCTS.find(p => p.id === Number(id));
+        if (product) {
+          message += `- ${product.name} (${qty}x) @Rp ${product.price.toLocaleString()}\n`;
+        }
+      });
+
+      message += `\n*TOTAL HARGA: Rp ${getTotal().toLocaleString()}*\n`;
+      message += `\n_Waktu Pemesanan: ${formattedDate}_`;
+      
+      const url = `https://wa.me/628123456789?text=${encodeURIComponent(message)}`;
+      window.open(url, '_blank');
+      
+      // Optional: Clear cart after success
+      // setCart({});
+      // setIsCartOpen(false);
+    } catch (error) {
+      console.error('Error submitting order:', error);
+      alert('Terjadi kesalahan saat mengirim pesanan. Silakan coba lagi.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const isFormValid = () => {
+    return Object.values(shippingData).every(value => value.trim() !== '') && Object.keys(cart).length > 0;
   };
 
   return (
@@ -206,58 +284,123 @@ export default function App() {
                   </button>
                 </div>
 
-                <div className="max-h-[50vh] overflow-y-auto pr-2 custom-scrollbar">
+                <div className="max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
                   {Object.keys(cart).length === 0 ? (
                     <div className="text-center py-12 text-[#94a3b8]">
                       <ShoppingCart size={48} className="mx-auto mb-4 opacity-20" />
                       <p>Keranjang masih kosong nih.</p>
                     </div>
                   ) : (
-                    <div className="space-y-4">
-                      {Object.entries(cart).map(([id, qty]) => {
-                        const product = PRODUCTS.find(p => p.id === Number(id));
-                        if (!product) return null;
-                        return (
-                          <div key={id} className="flex items-center gap-4 py-2 border-bottom border-[#f1f5f9]">
-                            <div className="w-16 h-16 bg-[#f8fafc] rounded-xl flex items-center justify-center text-3xl overflow-hidden shrink-0">
-                              {product.image ? (
-                                <img src={product.image} alt={product.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                              ) : (
-                                product.icon
-                              )}
+                    <div className="space-y-6">
+                      {/* Product List */}
+                      <div className="space-y-4">
+                        <h3 className="font-bold text-sm text-[#64748b] uppercase tracking-wider">Item Pesanan</h3>
+                        {Object.entries(cart).map(([id, qty]) => {
+                          const product = PRODUCTS.find(p => p.id === Number(id));
+                          if (!product) return null;
+                          return (
+                            <div key={id} className="flex items-center gap-4 py-2 border-bottom border-[#f1f5f9]">
+                              <div className="w-16 h-16 bg-[#f8fafc] rounded-xl flex items-center justify-center text-3xl overflow-hidden shrink-0">
+                                {product.image ? (
+                                  <img src={product.image} alt={product.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                                ) : (
+                                  product.icon
+                                )}
+                              </div>
+                              <div className="flex-1">
+                                <h4 className="font-bold text-sm">{product.name}</h4>
+                                <p className="text-xs text-orange-500 font-bold">Rp {(product.price * qty).toLocaleString()}</p>
+                              </div>
+                              <div className="flex items-center gap-3 bg-[#f1f5f9] p-1 rounded-lg">
+                                <button onClick={() => updateQty(Number(id), -1)} className="p-1 hover:bg-white rounded transition-colors shadow-sm">
+                                  <Minus size={14} />
+                                </button>
+                                <span className="text-sm font-bold w-4 text-center">{qty}</span>
+                                <button onClick={() => updateQty(Number(id), 1)} className="p-1 hover:bg-white rounded transition-colors shadow-sm">
+                                  <Plus size={14} />
+                                </button>
+                              </div>
                             </div>
-                            <div className="flex-1">
-                              <h4 className="font-bold text-sm">{product.name}</h4>
-                              <p className="text-xs text-orange-500 font-bold">Rp {(product.price * qty).toLocaleString()}</p>
-                            </div>
-                            <div className="flex items-center gap-3 bg-[#f1f5f9] p-1 rounded-lg">
-                              <button onClick={() => updateQty(Number(id), -1)} className="p-1 hover:bg-white rounded transition-colors shadow-sm">
-                                <Minus size={14} />
-                              </button>
-                              <span className="text-sm font-bold w-4 text-center">{qty}</span>
-                              <button onClick={() => updateQty(Number(id), 1)} className="p-1 hover:bg-white rounded transition-colors shadow-sm">
-                                <Plus size={14} />
-                              </button>
-                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Shipping Form */}
+                      <div className="space-y-4 pt-4 border-t border-[#f1f5f9]">
+                        <h3 className="font-bold text-sm text-[#64748b] uppercase tracking-wider">Data Pengiriman</h3>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold uppercase text-[#94a3b8] ml-1">Nama Depan</label>
+                            <input 
+                              type="text" name="firstName" value={shippingData.firstName} onChange={handleInputChange}
+                              placeholder="Contoh: Budi"
+                              className="w-full bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-orange-500 transition-colors"
+                            />
                           </div>
-                        );
-                      })}
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold uppercase text-[#94a3b8] ml-1">Nama Belakang</label>
+                            <input 
+                                type="text" name="lastName" value={shippingData.lastName} onChange={handleInputChange}
+                                placeholder="Contoh: Santoso"
+                                className="w-full bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-orange-500 transition-colors"
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold uppercase text-[#94a3b8] ml-1">Email</label>
+                          <input 
+                            type="email" name="email" value={shippingData.email} onChange={handleInputChange}
+                            placeholder="budi@email.com"
+                            className="w-full bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-orange-500 transition-colors"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold uppercase text-[#94a3b8] ml-1">Alamat Lengkap</label>
+                          <textarea 
+                            name="address" value={shippingData.address} onChange={handleInputChange}
+                            placeholder="Alamat lengkap rumah..."
+                            className="w-full bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-orange-500 transition-colors min-h-[80px]"
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold uppercase text-[#94a3b8] ml-1">Kota</label>
+                            <input 
+                              type="text" name="city" value={shippingData.city} onChange={handleInputChange}
+                              placeholder="Jakarta Selatan"
+                              className="w-full bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-orange-500 transition-colors"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold uppercase text-[#94a3b8] ml-1">Kode Pos</label>
+                            <input 
+                              type="text" name="postalCode" value={shippingData.postalCode} onChange={handleInputChange}
+                              placeholder="12720"
+                              className="w-full bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-orange-500 transition-colors"
+                            />
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>
 
-                <div className="mt-8 pt-6 border-t border-[#f1f5f9]">
-                  <div className="flex items-center justify-between mb-6">
+                <div className="mt-6 pt-6 border-t border-[#f1f5f9]">
+                  <div className="flex items-center justify-between mb-4">
                     <span className="font-bold text-lg">Total Pembayaran</span>
                     <span className="text-2xl font-black text-orange-500">Rp {getTotal().toLocaleString()}</span>
                   </div>
                   <button 
-                    disabled={Object.keys(cart).length === 0}
+                    disabled={!isFormValid() || isSubmitting}
                     onClick={checkoutWhatsApp}
-                    className="w-full bg-[#25D366] hover:bg-[#20bd5a] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-3 transition-colors shadow-lg shadow-green-500/20"
+                    className="w-full bg-[#25D366] hover:bg-[#20bd5a] disabled:opacity-50 disabled:grayscale disabled:cursor-not-allowed text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-3 transition-all shadow-lg shadow-green-500/20"
                   >
-                    <MessageCircle size={24} />
-                    Kirim Pesanan (WhatsApp)
+                    {isSubmitting ? (
+                      <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <MessageCircle size={24} />
+                    )}
+                    {isSubmitting ? 'Memproses...' : (isFormValid() ? 'Kirim Pesanan (WhatsApp)' : 'Lengkapi Data Pengiriman')}
                   </button>
                 </div>
               </div>
