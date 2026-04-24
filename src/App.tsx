@@ -100,7 +100,7 @@ export default function App() {
       // Note: Google Apps Script usually requires a 'POST' or 'GET' request.
       // Since we can't easily handle CORS 'POST' with redirect without a proxy,
       // and the user provided a typical Apps Script URL, we attempt a fetch.
-      await fetch('https://https://script.google.com/macros/s/AKfycbzeZbDcwI7QiI5_00oZQpP1Dlrb_AgV-DFD8IFmseYcImhU0DKom8M6l2vB2_4qz6JljQ/exec', {
+      await fetch('https://script.google.com/macros/s/AKfycbzeZbDcwI7QiI5_00oZQpP1Dlrb_AgV-DFD8IFmseYcImhU0DKom8M6l2vB2_4qz6JljQ/exec', {
         method: 'POST',
         mode: 'no-cors', // Use no-cors to bypass CORS preflight failures on standard Apps Script URLs
         headers: {
