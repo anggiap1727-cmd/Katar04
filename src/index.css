@@ -2,15 +2,19 @@
 
 @layer base {
   body {
-    @apply antialiased;
+    @apply antialiased selection:bg-orange-100 selection:text-orange-900;
   }
 }
 
 @layer utilities {
-  .bento-grid {
-    display: grid;
-    grid-template-columns: repeat(12, 1fr);
-    grid-template-rows: repeat(6, 1fr);
-    gap: 1.5rem;
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-orange-200 rounded-full hover:bg-orange-300;
   }
 }
+
